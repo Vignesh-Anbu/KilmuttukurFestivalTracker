@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kilmuttukur Maadu vidum thiruvizha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        form label {
+            display: block;
+            font-weight: bold;
+            color: #fff;
+        }
+        form input, form button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+        }
+        form input {
+            flex: 1;
+            max-width: 300px;
+        }
+        form button {
+            background-color: #ff7e5f;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        form button:hover {
+            background-color: #feb47b;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            overflow-x: auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #ff7e5f;
+            color: #fff;
+        }
+        td {
+            color: #333;
+        }
+        #sortBy, button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        #sortBy {
+            max-width: 200px;
+            cursor: pointer;
+        }
+        button {
+            background-color: #ff7e5f;
+            color: #fff;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background-color: #feb47b;
+        }
+    </style>
+    <!-- Include SheetJS library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>Kilmuttukur Maadu vidum thiruvizha</h1>
+
+    <form id="dataForm">
+        <label for="cardNumber">Card Number:</label>
+        <input type="text" id="cardNumber" placeholder="Enter Card Number" required>
+
+        <label for="timing">Timing (in seconds):</label>
+        <input type="number" id="timing" step="0.01" placeholder="Enter Timing" required>
+
+        <label for="name">Name (optional):</label>
+        <input type="text" id="name" placeholder="Enter Name">
+
+        <button type="submit">Add Data</button>
+    </form>
+
+    <div>
+        <label for="sortBy">Sort By:</label>
+        <select id="sortBy">
+            <option value="cardNumber">Card Number</option>
+            <option value="timing">Timing</option>
+            <option value="name">Name</option>
+        </select>
+        <button onclick="sortData()">Sort</button>
+        <button onclick="exportToExcel()">Export to Excel</button>
+    </div>
+
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>Card Number</th>
+                <th>Timing (in seconds)</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data rows will be inserted here -->
+        </tbody>
+    </table>
+
+    <script>
+        // Array to store the data
+        let data = JSON.parse(localStorage.getItem('data')) || [];
+
+        // Function to add data
+        document.getElementById('dataForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const cardNumber = document.getElementById('cardNumber').value;
+            const timing = parseFloat(document.getElementById('timing').value);
+            const name = document.getElementById('name').value || "-";
+
+            if (isNaN(timing)) {
+                alert("Please enter a valid number for timing.");
+                return;
+            }
+
+            // Check for duplicate card number
+            if (data.some(item => item.cardNumber === cardNumber)) {
+                alert("Card Number already exists. Please enter a unique Card Number.");
+                return;
+            }
+
+            data.push({ cardNumber, timing, name });
+            localStorage.setItem('data', JSON.stringify(data));
+            document.getElementById('dataForm').reset();
+
+            renderTable();
+        });
+
+        // Function to render the table
+        function renderTable() {
+            const tbody = document.getElementById('dataTable').querySelector('tbody');
+            tbody.innerHTML = '';
+
+            data.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" value="${item.cardNumber}" onchange="confirmEdit(${index}, 'cardNumber', this.value)"></td>
+                    <td><input type="number" step="0.01" value="${item.timing}" onchange="confirmEdit(${index}, 'timing', this.value)"></td>
+                    <td><input type="text" value="${item.name}" onchange="confirmEdit(${index}, 'name', this.value)"></td>
+                    <td>
+                        <button onclick="confirmDelete(${index})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Function to confirm and edit data
+        function confirmEdit(index, key, value) {
+            if (confirm("Are you sure you want to edit this field?")) {
+                if (key === 'timing') {
+                    value = parseFloat(value);
+                    if (isNaN(value)) {
+                        alert("Please enter a valid number for timing.");
+                        return;
+                    }
+                }
+                data[index][key] = value;
+                localStorage.setItem('data', JSON.stringify(data));
+                renderTable();
+            }
+        }
+
+        // Function to confirm and delete data
+        function confirmDelete(index) {
+            if (confirm("Are you sure you want to delete this item?")) {
+                data.splice(index, 1);
+                localStorage.setItem('data', JSON.stringify(data));
+                renderTable();
+            }
+        }
+
+        // Function to sort data
+        function sortData() {
+            const sortBy = document.getElementById('sortBy').value;
+            data.sort((a, b) => {
+                if (typeof a[sortBy] === 'string') {
+                    return a[sortBy].localeCompare(b[sortBy]);
+                } else {
+                    return a[sortBy] - b[sortBy];
+                }
+            });
+
+            renderTable();
+        }
+
+        // Function to export data to Excel
+        function exportToExcel() {
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Data");
+            XLSX.writeFile(wb, "data.xlsx");
+        }
+
+        // Initial render
+        renderTable();
+    </script>
+</body>
+</html>
